@@ -41,8 +41,12 @@
 #include "scpi/scpi.h"
 #include "scpi-def.h"
 
-static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
+static scpi_result_t switch_open_all(scpi_t * context)
+{
+  return SCPI_RES_OK;
+}
 #if 0
+static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
     scpi_number_t param1, param2;
     char bf[15];
     fprintf(stderr, "meas:volt:dc\r\n"); /* debug command name */
@@ -66,12 +70,9 @@ static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
     fprintf(stderr, "\tP2=%s\r\n", bf);
 
     SCPI_ResultDouble(context, 0);
-#endif
     return SCPI_RES_OK;
 }
-
 static scpi_result_t DMM_MeasureVoltageAcQ(scpi_t * context) {
-#if 0
     scpi_number_t param1, param2;
     char bf[15];
     fprintf(stderr, "meas:volt:ac\r\n"); /* debug command name */
@@ -95,12 +96,10 @@ static scpi_result_t DMM_MeasureVoltageAcQ(scpi_t * context) {
     fprintf(stderr, "\tP2=%s\r\n", bf);
 
     SCPI_ResultDouble(context, 0);
-#endif
     return SCPI_RES_OK;
 }
 
 static scpi_result_t DMM_ConfigureVoltageDc(scpi_t * context) {
-#if 0
     double param1, param2;
     fprintf(stderr, "conf:volt:dc\r\n"); /* debug command name */
 
@@ -116,10 +115,8 @@ static scpi_result_t DMM_ConfigureVoltageDc(scpi_t * context) {
 
     fprintf(stderr, "\tP1=%lf\r\n", param1);
     fprintf(stderr, "\tP2=%lf\r\n", param2);
-#endif
     return SCPI_RES_OK;
 }
-#if 0
 static scpi_result_t TEST_Bool(scpi_t * context) {
     scpi_bool_t param1;
     fprintf(stderr, "TEST:BOOL\r\n"); /* debug command name */
@@ -191,13 +188,13 @@ static scpi_result_t TEST_ArbQ(scpi_t * context) {
 
     return SCPI_RES_OK;
 }
+#endif
 
 struct _scpi_channel_value_t {
     int32_t row;
     int32_t col;
 };
 typedef struct _scpi_channel_value_t scpi_channel_value_t;
-
 /**
  * @brief
  * parses lists
@@ -238,6 +235,7 @@ static scpi_result_t TEST_Chanlst(scpi_t *context) {
             arr_idx = 0; /* set arr_idx to 0 */
             do { /* if valid, iterate over channel_list_param index while res == valid (do-while cause we have to do it once) */
                 res = SCPI_ExprChannelListEntry(context, &channel_list_param, chanlst_idx, &is_range, values_from, values_to, 4, &dimensions);
+		(void) res;
                 if (is_range == FALSE) { /* still can have multiple dimensions */
                     if (dimensions == 1) {
                         /* here we have our values
@@ -334,21 +332,13 @@ static scpi_result_t TEST_Chanlst(scpi_t *context) {
         size_t i;
         fprintf(stderr, "TEST_Chanlst: ");
         for (i = 0; i< arr_idx; i++) {
-            fprintf(stderr, "%d!%d, ", array[i].row, array[i].col);
+            my_fprintf(stderr, "%ld!%ld, ", array[i].row, array[i].col);
         }
-        fprintf(stderr, "\r\n");
+        my_fprintf(stderr, "\r\n");
     }
     return SCPI_RES_OK;
 }
-#endif
-/**
- * Reimplement IEEE488.2 *TST?
- *
- * Result should be 0 if everything is ok
- * Result should be 1 if something goes wrong
- *
- * Return SCPI_RES_OK
- */
+
 static scpi_result_t My_CoreTstQ(scpi_t * context) {
 
     SCPI_ResultInt32(context, 0);
@@ -390,17 +380,11 @@ const scpi_command_t scpi_commands[] = {
 
     {.pattern = "STATus:PRESet", .callback = SCPI_StatusPreset,},
 
-    /* DMM */
-    {.pattern = "MEASure:VOLTage:DC?", .callback = DMM_MeasureVoltageDcQ,},
-    {.pattern = "CONFigure:VOLTage:DC", .callback = DMM_ConfigureVoltageDc,},
-    {.pattern = "MEASure:VOLTage:DC:RATio?", .callback = SCPI_StubQ,},
-    {.pattern = "MEASure:VOLTage:AC?", .callback = DMM_MeasureVoltageAcQ,},
-    {.pattern = "MEASure:CURRent:DC?", .callback = SCPI_StubQ,},
-    {.pattern = "MEASure:CURRent:AC?", .callback = SCPI_StubQ,},
-    {.pattern = "MEASure:RESistance?", .callback = SCPI_StubQ,},
-    {.pattern = "MEASure:FRESistance?", .callback = SCPI_StubQ,},
-    {.pattern = "MEASure:FREQuency?", .callback = SCPI_StubQ,},
-    {.pattern = "MEASure:PERiod?", .callback = SCPI_StubQ,},
+    /* Signal Switchers */
+    {.pattern = "ROUTE:CLOSe",           .callback = TEST_Chanlst,},
+    {.pattern = "ROUTE:CLOSe:STATe?",    .callback = SCPI_StubQ,},
+    {.pattern = "ROUTE:OPEN:STATe?",     .callback = SCPI_StubQ,},
+    {.pattern = "ROUTE:OPEN:ALL",        .callback = switch_open_all,},
 #if 0
     {.pattern = "SYSTem:COMMunication:TCPIP:CONTROL?", .callback = SCPI_SystemCommTcpipControlQ,},
 

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "stm32l1xx.h"
 #include "stm32l1xx_conf.h"
 
@@ -58,3 +59,4 @@
 void UserButton_Callback(void); 
 void USART_CharReception_Callback(void); 
 void Error_Callback(void); 
+int my_fprintf(FILE *stream, const char *format, ...);
