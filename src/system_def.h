@@ -1,7 +1,10 @@
 #include "stm32l1xx.h"
 #include "stm32l1xx_conf.h"
 
-
+#define SERIAL_NUMBER_STRING "1234"
+#define HW_VERSION_STRING "1.0"
+#define FW_VERSION_STRING "0.1"
+#define VERSION_STRING HW_VERSION_STRING "-" FW_VERSION_STRING
 #define USARTx_INSTANCE               USART2
 #define USARTx_CLK_ENABLE()           LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_USART2)
 #define USARTx_IRQn                   USART2_IRQn
