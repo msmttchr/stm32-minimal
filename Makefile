@@ -1,6 +1,6 @@
 # put your *.o targets here, make should handle the rest!
 
-SRCS = system_stm32l1xx.c main.c 
+SRCS = system_stm32l1xx.c main.c stm32l1xx_it.c scpi-def.c
 OBJ = $(SRCS:.c=.o)
 
 # all the files will be generated with this name (main.elf, main.bin, main.hex, etc)
@@ -8,6 +8,9 @@ PROJ_NAME=project
 
 # Location of the Libraries folder from the STM32F0xx Standard Peripheral Library
 LL_LIB=Drivers
+
+# SCPI Parser library
+SCPI_LIB=libscpi
 
 # Location of the linker scripts
 LDSCRIPT_INC=Device/ldscripts
@@ -36,7 +39,7 @@ vpath %.a .
 
 ROOT=$(shell pwd)
 
-CFLAGS += -I $(LL_LIB) -I $(LL_LIB)/CMSIS/Device/ST/STM32L1xx/Include
+CFLAGS += -I $(LL_LIB) -I $(LL_LIB)/CMSIS/Device/ST/STM32L1xx/Include -I $(SCPI_LIB)/inc
 CFLAGS += -I $(LL_LIB)/CMSIS/Include -I $(LL_LIB)/STM32L1xx_HAL_Driver/Inc -I src
 CFLAGS += -I./src
 
@@ -56,12 +59,12 @@ proj: 	$(PROJ_NAME).elf
 	$(CC) $(CFLAGS) -c -o src/$@ $<
 
 $(PROJ_NAME).elf: $(SRCS)
-	$(CC) $(CFLAGS) $^ -o $@ -L$(LL_LIB) -lll -L$(LDSCRIPT_INC) -lm -Tstm32l1xx.ld
+	$(CC) $(CFLAGS) $^ -o $@ -L$(LL_LIB) -lll -L$(SCPI_LIB)/dist -lscpi -L$(LDSCRIPT_INC) -lm -Tstm32l1xx.ld
 	$(OBJCOPY) -O ihex $(PROJ_NAME).elf $(PROJ_NAME).hex
 	$(OBJCOPY) -O binary $(PROJ_NAME).elf $(PROJ_NAME).bin
 	$(OBJDUMP) -St $(PROJ_NAME).elf >$(PROJ_NAME).lst
 	$(SIZE) -A $(PROJ_NAME).elf
-		
+
 clean:
 	find ./ -name '*~' | xargs rm -f	
 	rm -f *.o
