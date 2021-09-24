@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "stm32l1xx.h"
 #include "stm32l1xx_conf.h"
@@ -30,38 +31,27 @@ scpi_result_t SCPI_Flush(scpi_t * context) {
 
 int SCPI_Error(scpi_t * context, int_fast16_t err) {
   (void) context;
-  char message[256];
-  size_t len;
 
-  len = sprintf(message, "**ERROR: %d, \"%s\"\r\n", (int16_t) err, SCPI_ErrorTranslate(err));
-  txBuffer((uint8_t *) message, len);
+  my_fprintf(stderr, "**ERROR: %d, \"%s\"\r\n", (int16_t) err, SCPI_ErrorTranslate(err));
   return 0;
 }
 
 scpi_result_t SCPI_Control(scpi_t * context, scpi_ctrl_name_t ctrl, scpi_reg_val_t val) {
-  (void) context;
+    (void) context;
 
-  char message[256];
-  size_t len;
-
-  if (SCPI_CTRL_SRQ == ctrl) {
-    len = sprintf(message, "**SRQ: 0x%X (%d)\r\n", val, val);
-  } else {
-    len = sprintf(message, "**CTRL %02x: 0x%X (%d)\r\n", ctrl, val, val);
-  }
-  txBuffer((uint8_t *) message, len);
-  return SCPI_RES_OK;
+    if (SCPI_CTRL_SRQ == ctrl) {
+        my_fprintf(stderr, "**SRQ: 0x%X (%d)\r\n", val, val);
+    } else {
+        my_fprintf(stderr, "**CTRL %02x: 0x%X (%d)\r\n", ctrl, val, val);
+    }
+    return SCPI_RES_OK;
 }
 
 scpi_result_t SCPI_Reset(scpi_t * context) {
-  (void) context;
+    (void) context;
 
-  char message[256];
-  size_t len;
-
-  len = sprintf(message, "**Reset\r\n");
-  txBuffer((uint8_t *) message, len);
-  return SCPI_RES_OK;
+    fprintf(stderr, "**Reset\r\n");
+    return SCPI_RES_OK;
 }
 
 scpi_result_t SCPI_SystemCommTcpipControlQ(scpi_t * context) {
@@ -82,8 +72,20 @@ void SystemClock_Config(void){
   LL_Init1msTick(SystemCoreClock);
 }
 
+int my_fprintf(FILE *stream, const char *format, ...)
+{
+  char message[256];
+  int res;
+  va_list ap;
+  va_start (ap, format);
+  res = vsprintf(message, format, ap);
+  va_end (ap);
+  txBuffer((uint8_t *)message, res);
+  return res;
+}
+
 int main(void){
-  const char *message = "Hello World\r\n";
+  const char *welcome_message = "RF Switch 7 Channels (A-G)\r\n(c) 2021 STMictroelectronics RF Team\r\n";
 
 
   /* Configure the system clock */
@@ -101,7 +103,7 @@ int main(void){
   /* Configure USARTx (USART IP configuration and related GPIO initialization) */
   Configure_USART();
 
-  txBuffer((uint8_t*)message, strlen(message));
+  my_fprintf(stderr, "%s", welcome_message);
     
   SCPI_Init(&scpi_context,
             scpi_commands,
@@ -221,14 +223,17 @@ void UserButton_Callback(void)
  */
 void USART_CharReception_Callback(void)
 {
-  char received_char;
+  static char line[256];
+  static int index=0;
 
   /* Read Received character. RXNE flag is cleared by reading of DR register */
-  received_char = (char) LL_USART_ReceiveData8(USARTx_INSTANCE);
-
+  line[index++] = (char) LL_USART_ReceiveData8(USARTx_INSTANCE);
   /* Echo received character on TX */
-  // LL_USART_TransmitData8(USARTx_INSTANCE, received_char);
-  SCPI_Input(&scpi_context, &received_char, 1);
+  LL_USART_TransmitData8(USARTx_INSTANCE, line[index-1]);
+  if ((index == sizeof(line)) || (line[index-1] == '\n')) {
+    SCPI_Input(&scpi_context, line, index);
+    index = 0;
+  }
 }
 
 /**
