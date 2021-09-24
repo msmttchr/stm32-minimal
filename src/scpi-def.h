@@ -30,6 +30,7 @@
 #define __SCPI_DEF_H_
 
 #include "scpi/scpi.h"
+#include "system_def.h"
 
 #define SCPI_INPUT_BUFFER_LENGTH 256
 #define SCPI_ERROR_QUEUE_SIZE 17
