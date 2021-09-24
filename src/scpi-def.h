@@ -33,10 +33,10 @@
 
 #define SCPI_INPUT_BUFFER_LENGTH 256
 #define SCPI_ERROR_QUEUE_SIZE 17
-#define SCPI_IDN1 "MANUFACTURE"
-#define SCPI_IDN2 "INSTR2013"
-#define SCPI_IDN3 NULL
-#define SCPI_IDN4 "01-02"
+#define SCPI_IDN1 "STMicroelectronics"
+#define SCPI_IDN2 "LGM01"
+#define SCPI_IDN3 SERIAL_NUMBER_STRING
+#define SCPI_IDN4 VERSION_STRING
 
 extern const scpi_command_t scpi_commands[];
 extern scpi_interface_t scpi_interface;
