@@ -228,8 +228,10 @@ void USART_CharReception_Callback(void)
 
   /* Read Received character. RXNE flag is cleared by reading of DR register */
   line[index++] = (char) LL_USART_ReceiveData8(USARTx_INSTANCE);
+#ifdef UART_ECHO
   /* Echo received character on TX */
   LL_USART_TransmitData8(USARTx_INSTANCE, line[index-1]);
+#endif
   if ((index == sizeof(line)) || (line[index-1] == '\n')) {
     SCPI_Input(&scpi_context, line, index);
     index = 0;
