@@ -40,8 +40,9 @@
 #include <string.h>
 #include "scpi/scpi.h"
 #include "scpi-def.h"
+#include <ctype.h>
 
-static scpi_result_t switch_open_all(scpi_t * context)
+static scpi_result_t route_open_all(scpi_t * context)
 {
   return SCPI_RES_OK;
 }
@@ -175,6 +176,81 @@ static scpi_result_t TEST_Text(scpi_t * context) {
     }
 
     my_fprintf(stderr, "TEXT: ***%s***\r\n", buffer);
+
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t _check_path_param(scpi_t * context, char *param, size_t len)
+{
+    char endpoint1, endpoint2;
+    if (len != 2) {
+      SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Wrong Length", 0);
+      return SCPI_RES_ERR;
+    }
+
+    endpoint1 = toupper(param[0]);
+    endpoint2 = toupper(param[1]);
+
+    if ((endpoint1 < 'A') || (endpoint1 > 'G')) {
+      SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Wrong endpoint1", 0);
+      return SCPI_RES_ERR;
+    }
+    if ((endpoint2 < 'A') || (endpoint2 > 'G')) {
+      SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Wrong endpoint2", 0);
+      return SCPI_RES_ERR;
+    }
+
+    if (endpoint1 == endpoint2) {
+      SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Same endpoint", 0);
+      return SCPI_RES_ERR;
+    }
+
+    if (endpoint1 > endpoint2) {
+      /* By convention we swap the two endpoint in this case */
+      char tmp = endpoint1;
+      endpoint1 = endpoint2;
+      endpoint2 = tmp;
+    }
+    param[0] = endpoint1;
+    param[1] = endpoint2;
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t route_connect(scpi_t * context) {
+    char buffer[100];
+    size_t copy_len = 0;
+    scpi_result_t res;
+    
+    if (!SCPI_ParamCopyText(context, buffer, sizeof (buffer), &copy_len, TRUE)) {
+      return SCPI_RES_ERR;
+    }
+
+    res = _check_path_param(context, buffer, copy_len);
+    if (res != SCPI_RES_OK)
+      return res;
+
+    /* Make the connection */
+    my_fprintf(stderr, "ROUTE:CONNECT: ***%c->%c(%d)***\r\n", buffer[0], buffer[1], copy_len);
+
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t route_connect_query (scpi_t * context) {
+    char buffer[100];
+    size_t copy_len=0;
+    scpi_result_t res;
+
+    /* read first parameter if present */
+    if (!SCPI_ParamCopyText(context, buffer, sizeof (buffer), &copy_len, FALSE)) {
+        buffer[0] = '\0';
+    } else {
+      res = _check_path_param(context, buffer, copy_len);
+      if (res != SCPI_RES_OK)
+	return res;
+    }
+
+    /* Query the connection */
+    my_fprintf(stderr, "\tQuery %s(%d)\r\n", buffer, copy_len);
 
     return SCPI_RES_OK;
 }
@@ -384,11 +460,16 @@ const scpi_command_t scpi_commands[] = {
     /* Signal Switchers */
     {.pattern = "ROUTE:CLOSe",           .callback = TEST_Chanlst,},
     {.pattern = "ROUTE:CLOSe:STATe?",    .callback = SCPI_StubQ,},
+    {.pattern = "ROUTE:CONNEct",         .callback = route_connect,},
+    {.pattern = "ROUTE:CONNEct?",        .callback = route_connect_query,},
     {.pattern = "ROUTE:OPEN:STATe?",     .callback = SCPI_StubQ,},
-    {.pattern = "ROUTE:OPEN:ALL",        .callback = switch_open_all,},
-    {.pattern = "ROUTE:ATTenuation?",    .callback = SCPI_StubQ,}, /* Report attenuation for a path (@1,2) at given <frequency> or all frequencies */
-    {.pattern = "ROUTe:PATH:CATalog?",     .callback = SCPI_StubQ,},
+    {.pattern = "ROUTE:OPEN:ALL",        .callback = route_open_all,},
+    {.pattern = "ROUTE:ATTenuation?",    .callback = SCPI_StubQ,}, /* Report attenuation for a path (@1,2) at given <frequency> or all frequencies (frequency points) */
+    {.pattern = "ROUTE:ATTenuation:FREQuency:START?",    .callback = SCPI_StubQ,}, /* Start frequencys available */
+    {.pattern = "ROUTE:ATTenuation:FREQuency:STEP?",    .callback = SCPI_StubQ,}, /* Step frequency available */
+    {.pattern = "ROUTE:ATTenuation:FREQuency:POINts?",    .callback = SCPI_StubQ,}, /* Number of points available */
 #if 0
+    {.pattern = "ROUTe:PATH:CATalog?",     .callback = SCPI_StubQ,},
     {.pattern = "SYSTem:COMMunication:TCPIP:CONTROL?", .callback = SCPI_SystemCommTcpipControlQ,},
 #endif
     {.pattern = "TEST:BOOL", .callback = TEST_Bool,},
