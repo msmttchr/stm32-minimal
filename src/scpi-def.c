@@ -385,6 +385,8 @@ const scpi_command_t scpi_commands[] = {
     {.pattern = "ROUTE:CLOSe:STATe?",    .callback = SCPI_StubQ,},
     {.pattern = "ROUTE:OPEN:STATe?",     .callback = SCPI_StubQ,},
     {.pattern = "ROUTE:OPEN:ALL",        .callback = switch_open_all,},
+    {.pattern = "ROUTE:ATTenuation?",    .callback = SCPI_StubQ,}, /* Report attenuation for a path (@1,2) at given <frequency> or all frequencies */
+    {.pattern = "ROUTe:PATH:CATalog?",     .callback = SCPI_StubQ,},
 #if 0
     {.pattern = "SYSTem:COMMunication:TCPIP:CONTROL?", .callback = SCPI_SystemCommTcpipControlQ,},
 

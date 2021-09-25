@@ -1,10 +1,10 @@
 # put your *.o targets here, make should handle the rest!
 
-SRCS = system_stm32l1xx.c main.c stm32l1xx_it.c scpi-def.c
+SRCS = system_stm32l1xx.c main.c stm32l1xx_it.c scpi-def.c periph.c
 OBJ = $(SRCS:.c=.o)
 
 # all the files will be generated with this name (main.elf, main.bin, main.hex, etc)
-PROJ_NAME=project
+PROJ_NAME=rf-switch
 
 # Location of the Libraries folder from the STM32F0xx Standard Peripheral Library
 LL_LIB=Drivers
@@ -64,6 +64,10 @@ $(PROJ_NAME).elf: $(SRCS)
 	$(OBJCOPY) -O binary $(PROJ_NAME).elf $(PROJ_NAME).bin
 	$(OBJDUMP) -St $(PROJ_NAME).elf >$(PROJ_NAME).lst
 	$(SIZE) -A $(PROJ_NAME).elf
+
+flash: proj
+	pyocd load $(PROJ_NAME).elf
+	pyocd reset
 
 clean:
 	find ./ -name '*~' | xargs rm -f	
