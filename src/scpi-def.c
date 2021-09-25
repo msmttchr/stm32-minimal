@@ -49,7 +49,7 @@ static scpi_result_t switch_open_all(scpi_t * context)
 static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
     scpi_number_t param1, param2;
     char bf[15];
-    fprintf(stderr, "meas:volt:dc\r\n"); /* debug command name */
+    my_fprintf(stderr, "meas:volt:dc\r\n"); /* debug command name */
 
     /* read first parameter if present */
     if (!SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, FALSE)) {
@@ -63,11 +63,11 @@ static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
 
 
     SCPI_NumberToStr(context, scpi_special_numbers_def, &param1, bf, 15);
-    fprintf(stderr, "\tP1=%s\r\n", bf);
+    my_fprintf(stderr, "\tP1=%s\r\n", bf);
 
 
     SCPI_NumberToStr(context, scpi_special_numbers_def, &param2, bf, 15);
-    fprintf(stderr, "\tP2=%s\r\n", bf);
+    my_fprintf(stderr, "\tP2=%s\r\n", bf);
 
     SCPI_ResultDouble(context, 0);
     return SCPI_RES_OK;
@@ -75,7 +75,7 @@ static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
 static scpi_result_t DMM_MeasureVoltageAcQ(scpi_t * context) {
     scpi_number_t param1, param2;
     char bf[15];
-    fprintf(stderr, "meas:volt:ac\r\n"); /* debug command name */
+    my_fprintf(stderr, "meas:volt:ac\r\n"); /* debug command name */
 
     /* read first parameter if present */
     if (!SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, FALSE)) {
@@ -89,11 +89,11 @@ static scpi_result_t DMM_MeasureVoltageAcQ(scpi_t * context) {
 
 
     SCPI_NumberToStr(context, scpi_special_numbers_def, &param1, bf, 15);
-    fprintf(stderr, "\tP1=%s\r\n", bf);
+    my_fprintf(stderr, "\tP1=%s\r\n", bf);
 
 
     SCPI_NumberToStr(context, scpi_special_numbers_def, &param2, bf, 15);
-    fprintf(stderr, "\tP2=%s\r\n", bf);
+    my_fprintf(stderr, "\tP2=%s\r\n", bf);
 
     SCPI_ResultDouble(context, 0);
     return SCPI_RES_OK;
@@ -101,7 +101,7 @@ static scpi_result_t DMM_MeasureVoltageAcQ(scpi_t * context) {
 
 static scpi_result_t DMM_ConfigureVoltageDc(scpi_t * context) {
     double param1, param2;
-    fprintf(stderr, "conf:volt:dc\r\n"); /* debug command name */
+    my_fprintf(stderr, "conf:volt:dc\r\n"); /* debug command name */
 
     /* read first parameter if present */
     if (!SCPI_ParamDouble(context, &param1, TRUE)) {
@@ -113,20 +113,21 @@ static scpi_result_t DMM_ConfigureVoltageDc(scpi_t * context) {
         /* do something, if parameter not present */
     }
 
-    fprintf(stderr, "\tP1=%lf\r\n", param1);
-    fprintf(stderr, "\tP2=%lf\r\n", param2);
+    my_fprintf(stderr, "\tP1=%lf\r\n", param1);
+    my_fprintf(stderr, "\tP2=%lf\r\n", param2);
     return SCPI_RES_OK;
 }
+#endif
 static scpi_result_t TEST_Bool(scpi_t * context) {
     scpi_bool_t param1;
-    fprintf(stderr, "TEST:BOOL\r\n"); /* debug command name */
+    my_fprintf(stderr, "TEST:BOOL\r\n"); /* debug command name */
 
     /* read first parameter if present */
     if (!SCPI_ParamBool(context, &param1, TRUE)) {
         return SCPI_RES_ERR;
     }
 
-    fprintf(stderr, "\tP1=%d\r\n", param1);
+    my_fprintf(stderr, "\tP1=%d\r\n", param1);
 
     return SCPI_RES_OK;
 }
@@ -148,7 +149,7 @@ static scpi_result_t TEST_ChoiceQ(scpi_t * context) {
     }
 
     SCPI_ChoiceToName(trigger_source, param, &name);
-    fprintf(stderr, "\tP1=%s (%ld)\r\n", name, (long int) param);
+    my_fprintf(stderr, "\tP1=%s (%ld)\r\n", name, (long int) param);
 
     SCPI_ResultInt32(context, param);
 
@@ -160,7 +161,7 @@ static scpi_result_t TEST_Numbers(scpi_t * context) {
 
     SCPI_CommandNumbers(context, numbers, 2, 1);
 
-    fprintf(stderr, "TEST numbers %d %d\r\n", numbers[0], numbers[1]);
+    my_fprintf(stderr, "TEST numbers %d %d\r\n", numbers[0], numbers[1]);
 
     return SCPI_RES_OK;
 }
@@ -173,7 +174,7 @@ static scpi_result_t TEST_Text(scpi_t * context) {
         buffer[0] = '\0';
     }
 
-    fprintf(stderr, "TEXT: ***%s***\r\n", buffer);
+    my_fprintf(stderr, "TEXT: ***%s***\r\n", buffer);
 
     return SCPI_RES_OK;
 }
@@ -188,7 +189,7 @@ static scpi_result_t TEST_ArbQ(scpi_t * context) {
 
     return SCPI_RES_OK;
 }
-#endif
+
 
 struct _scpi_channel_value_t {
     int32_t row;
@@ -330,7 +331,7 @@ static scpi_result_t TEST_Chanlst(scpi_t *context) {
 
     {
         size_t i;
-        fprintf(stderr, "TEST_Chanlst: ");
+        my_fprintf(stderr, "TEST_Chanlst: ");
         for (i = 0; i< arr_idx; i++) {
             my_fprintf(stderr, "%ld!%ld, ", array[i].row, array[i].col);
         }
@@ -389,14 +390,13 @@ const scpi_command_t scpi_commands[] = {
     {.pattern = "ROUTe:PATH:CATalog?",     .callback = SCPI_StubQ,},
 #if 0
     {.pattern = "SYSTem:COMMunication:TCPIP:CONTROL?", .callback = SCPI_SystemCommTcpipControlQ,},
-
+#endif
     {.pattern = "TEST:BOOL", .callback = TEST_Bool,},
     {.pattern = "TEST:CHOice?", .callback = TEST_ChoiceQ,},
     {.pattern = "TEST#:NUMbers#", .callback = TEST_Numbers,},
     {.pattern = "TEST:TEXT", .callback = TEST_Text,},
     {.pattern = "TEST:ARBitrary?", .callback = TEST_ArbQ,},
     {.pattern = "TEST:CHANnellist", .callback = TEST_Chanlst,},
-#endif
     SCPI_CMD_LIST_END
 };
 
