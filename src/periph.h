@@ -10,4 +10,5 @@ void     LED_Off(void);
 void     LED_Blinking(uint32_t Period);
 void     UserButton_Init(void);
 size_t   USART_TxBuffer(uint8_t*buffer, size_t size);
+char    *getUidString(void);   
 #endif

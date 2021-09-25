@@ -59,7 +59,7 @@ void SystemClock_Config(void){
 }
 
 int main(void){
-  const char *welcome_message = "RF Switch 7 Channels (A-G)\r\n(c) 2021 STMictroelectronics RF Team\r\n";
+  const char *welcome_message = "RF Switch 7 Channels (A-G) " SCPI_IDN2 " version " SCPI_IDN4 "\r\n(c) 2021 STMictroelectronics RF Team\r\n";
 
 
   /* Configure the system clock */

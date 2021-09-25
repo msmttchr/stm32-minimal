@@ -222,3 +222,11 @@ size_t USART_TxBuffer(uint8_t*buffer, size_t size)
   //LED_On();
   return size;
 }
+
+char *getUidString(void)
+{
+  static char uid_string[13];
+  unsigned int *uid = (unsigned int *) UID_BASE;
+  sprintf(uid_string, "%08x%08x%08x", uid[0], uid[1], uid[2]);
+  return uid_string;
+}
