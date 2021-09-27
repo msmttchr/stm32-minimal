@@ -1,6 +1,6 @@
 # put your *.o targets here, make should handle the rest!
 
-SRCS = system_stm32l1xx.c main.c stm32l1xx_it.c scpi-def.c periph.c
+SRCS = system_stm32l1xx.c main.c stm32l1xx_it.c scpi-def.c periph.c routing.c
 OBJ = $(SRCS:.c=.o)
 
 # all the files will be generated with this name (main.elf, main.bin, main.hex, etc)
