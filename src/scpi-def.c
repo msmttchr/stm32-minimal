@@ -222,6 +222,7 @@ static scpi_result_t route_connect(scpi_t * context) {
     char buffer[100];
     size_t copy_len = 0;
     scpi_result_t res;
+    int retval = 0;
     
     if (!SCPI_ParamCopyText(context, buffer, sizeof (buffer), &copy_len, TRUE)) {
       return SCPI_RES_ERR;
@@ -232,20 +233,24 @@ static scpi_result_t route_connect(scpi_t * context) {
       return res;
 
     /* Make the connection */
-    routing_connection(buffer[0], buffer[1]);
-    my_fprintf(stderr, "ROUTE:CONNECT: ***%c->%c(%d)***\r\n", buffer[0], buffer[1], copy_len);
+    retval = routing_connection(buffer[0], buffer[1]);
+    my_fprintf(stderr, "ROUTE:CONNECT: ***%c->%c(%d)***\r\n", buffer[0], buffer[1], retval);
 
     return SCPI_RES_OK;
 }
 
 static scpi_result_t route_connect_query (scpi_t * context) {
-    char buffer[100];
+    char buffer[32];
+    char buffer_out[32];
     size_t copy_len=0;
     scpi_result_t res;
+    int retval;
+    char *param = buffer;
 
     /* read first parameter if present */
     if (!SCPI_ParamCopyText(context, buffer, sizeof (buffer), &copy_len, FALSE)) {
-        buffer[0] = '\0';
+        param = NULL;
+	buffer[0] = '\0';
     } else {
       res = _check_path_param(context, buffer, copy_len);
       if (res != SCPI_RES_OK)
@@ -254,6 +259,8 @@ static scpi_result_t route_connect_query (scpi_t * context) {
 
     /* Query the connection */
     my_fprintf(stderr, "\tQuery %s(%d)\r\n", buffer, copy_len);
+    retval = routing_connection_query(param, buffer_out);
+    my_fprintf(stderr, "\tQuery res %d(%s)\r\n", retval, buffer_out);
 
     return SCPI_RES_OK;
 }

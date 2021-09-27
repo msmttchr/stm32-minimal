@@ -1,7 +1,9 @@
 #include "stm32l1xx.h"
 #include "stm32l1xx_conf.h"
 #include <stdint.h>
+#include <string.h>
 #include "routing.h"
+#include "system_def.h"
 
 typedef enum switch_pin_e
   {
@@ -18,11 +20,10 @@ typedef enum switch_pin_e
 typedef struct routing_table_item_s {
   switch_pin_t pin1;
   switch_pin_t pin2;
-  int active;
 } routing_table_item_t;
 
-#define PINS(a,b) {RF##a, RF##b, 0}
-#define NO_PINS {NO_PIN,NO_PIN, 0}
+#define PINS(a,b) {RF##a, RF##b}
+#define NO_PINS {NO_PIN,NO_PIN}
 
 routing_table_item_t routing_table[][7]=
   {          /* A        B          C          D          E          F          G */
@@ -64,56 +65,67 @@ const PE42526_control_t PE42526_connection_map[]={
 };
 
 struct PE42526_s;
-typedef void (*init_t) (struct PE42526_s, PE42526_switch_control_t);
-typedef void (*connection_t) (struct PE42526_s, switch_pin_t);
-typedef void (*off_t) (struct PE42526_s);
+typedef void (*init_t) (struct PE42526_s *, PE42526_switch_control_t);
+typedef void (*connection_t) (struct PE42526_s *, switch_pin_t);
+typedef int (*connection_active_t) (struct PE42526_s *, switch_pin_t);
+typedef void (*switch_off_t) (struct PE42526_s *);
 /* PE42526 RF Switch */
 typedef struct PE42526_s {
   char *name;           /* Switch name */
   PE42526_switch_control_t control;
   init_t init;       /* callback to init */
   connection_t connection; /* callback to make a connection */
-  off_t switch_off; /* callback to switch off all connections */
+  connection_active_t connection_active; /* callback to make a connection */
+  switch_off_t switch_off; /* callback to switch off all connections */
 } PE42526_t;
 
 PE42526_t RFswitch[7];
 
-static void switch_connection(PE42526_t rf_switch, switch_pin_t pin)
+static void set_gpio_pin(GPIO_TypeDef *GPIOx, uint32_t pin, uint32_t value)
 {
-  PE42526_control_t set_value = PE42526_connection_map[pin];
-  if (set_value.v1) {
-    LL_GPIO_SetOutputPin(rf_switch.control.v1.port, rf_switch.control.v1.pin);
-  } else {
-    LL_GPIO_ResetOutputPin(rf_switch.control.v1.port, rf_switch.control.v1.pin);
-  }
-  if (set_value.v2) {
-    LL_GPIO_SetOutputPin(rf_switch.control.v2.port, rf_switch.control.v2.pin);
-  } else {
-    LL_GPIO_ResetOutputPin(rf_switch.control.v2.port, rf_switch.control.v2.pin);
-  }
-  if (set_value.v3) {
-    LL_GPIO_SetOutputPin(rf_switch.control.v3.port, rf_switch.control.v1.pin);
-  } else {
-    LL_GPIO_ResetOutputPin(rf_switch.control.v3.port, rf_switch.control.v1.pin);
-  }
+  if (value)
+    LL_GPIO_SetOutputPin(GPIOx, pin);
+  else
+    LL_GPIO_ResetOutputPin(GPIOx, pin);
 }
 
-static void switch_off(PE42526_t rf_switch)
+static int gpio_match(GPIO_definition_t gpio, uint32_t value)
+{
+  return (LL_GPIO_IsOutputPinSet(gpio.port, gpio.pin) == value);
+}
+
+static void switch_connection(PE42526_t *rf_switch, switch_pin_t pin)
+{
+  PE42526_control_t set_value = PE42526_connection_map[pin];
+  set_gpio_pin(rf_switch->control.v1.port, rf_switch->control.v1.pin, set_value.v1);
+  set_gpio_pin(rf_switch->control.v2.port, rf_switch->control.v2.pin, set_value.v2);
+  set_gpio_pin(rf_switch->control.v3.port, rf_switch->control.v3.pin, set_value.v3);
+}
+
+static int switch_connection_active(PE42526_t *rf_switch, switch_pin_t pin)
+{
+  PE42526_control_t set_value = PE42526_connection_map[pin];
+  return (gpio_match(rf_switch->control.v1, set_value.v1) &&	\
+	  gpio_match(rf_switch->control.v2, set_value.v2) &&	\
+	  gpio_match(rf_switch->control.v3, set_value.v3));
+}
+
+static void switch_off(PE42526_t *rf_switch)
 {
   switch_connection(rf_switch, RFC);
 }
 
-static void switch_init(PE42526_t rf_switch, PE42526_switch_control_t switch_control)
+static void switch_init(PE42526_t *rf_switch, PE42526_switch_control_t switch_control)
 {
-  rf_switch.control.v1 = switch_control.v1;
-  rf_switch.control.v2 = switch_control.v2;
-  rf_switch.control.v3 = switch_control.v3;
-  LL_GPIO_SetPinMode(rf_switch.control.v1.port, rf_switch.control.v1.pin, LL_GPIO_MODE_OUTPUT);
-  LL_GPIO_SetPinOutputType(rf_switch.control.v1.port, rf_switch.control.v1.pin, LL_GPIO_OUTPUT_PUSHPULL);
-  LL_GPIO_SetPinMode(rf_switch.control.v2.port, rf_switch.control.v2.pin, LL_GPIO_MODE_OUTPUT);
-  LL_GPIO_SetPinOutputType(rf_switch.control.v3.port, rf_switch.control.v3.pin, LL_GPIO_OUTPUT_PUSHPULL);
-  LL_GPIO_SetPinMode(rf_switch.control.v3.port, rf_switch.control.v3.pin, LL_GPIO_MODE_OUTPUT);
-  LL_GPIO_SetPinOutputType(rf_switch.control.v3.port, rf_switch.control.v3.pin, LL_GPIO_OUTPUT_PUSHPULL);
+  rf_switch->control.v1 = switch_control.v1;
+  rf_switch->control.v2 = switch_control.v2;
+  rf_switch->control.v3 = switch_control.v3;
+  LL_GPIO_SetPinMode(rf_switch->control.v1.port, rf_switch->control.v1.pin, LL_GPIO_MODE_OUTPUT);
+  LL_GPIO_SetPinOutputType(rf_switch->control.v1.port, rf_switch->control.v1.pin, LL_GPIO_OUTPUT_PUSHPULL);
+  LL_GPIO_SetPinMode(rf_switch->control.v2.port, rf_switch->control.v2.pin, LL_GPIO_MODE_OUTPUT);
+  LL_GPIO_SetPinOutputType(rf_switch->control.v3.port, rf_switch->control.v3.pin, LL_GPIO_OUTPUT_PUSHPULL);
+  LL_GPIO_SetPinMode(rf_switch->control.v3.port, rf_switch->control.v3.pin, LL_GPIO_MODE_OUTPUT);
+  LL_GPIO_SetPinOutputType(rf_switch->control.v3.port, rf_switch->control.v3.pin, LL_GPIO_OUTPUT_PUSHPULL);
   switch_connection(rf_switch, RFC);
 }
 
@@ -131,9 +143,6 @@ void routing_init(void)
 {
   int i;
   
-  /* TODO: Make routing table symmetric */
-  /* routing_table[i][j] = routing_table[j][i] below diagonal */
-
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
@@ -141,12 +150,12 @@ void routing_init(void)
   for (i = 0; i < sizeof(RFswitch)/sizeof(PE42526_t); i++) {
     RFswitch[i].init = switch_init;
     RFswitch[i].connection = switch_connection;
+    RFswitch[i].connection_active = switch_connection_active;
     RFswitch[i].switch_off = switch_off;
   }
   for (i = 0; i < sizeof(RFswitch)/sizeof(PE42526_t); i++) {
-    RFswitch[i].init(RFswitch[i], RFswitch_control[i]);
+    RFswitch[i].init(&RFswitch[i], RFswitch_control[i]);
   }
-  routing_disconnect_all();
 }
 
 int routing_connection(char ep1, char ep2)
@@ -160,20 +169,65 @@ int routing_connection(char ep1, char ep2)
     /* Connection not possible */
     return -1;
 
-  RFswitch[sw1].connection(RFswitch[sw1], entry.pin1);
-  RFswitch[sw2].connection(RFswitch[sw2], entry.pin2);
-  routing_table[sw1][sw2].active = 1;
+  RFswitch[sw1].connection(&RFswitch[sw1], entry.pin1);
+  RFswitch[sw2].connection(&RFswitch[sw2], entry.pin2);
 
   return 0;
 }
 
+int routing_connection_query(char *endpoints, char *reply_buffer)
+{
+  int ep1 = -1;
+  int ep2 = -1;
+  int sw1, sw2;
+  int retval = 0;
+  char reply[32];
+  char *ptr=reply;
+  routing_table_item_t pins;
+  
+  if (endpoints != NULL) {
+    ep1 = endpoints[0] - 'A';
+    ep2 = endpoints[1] - 'A';
+  }
+  memset (reply, 0, sizeof(reply));
+  my_fprintf(stderr, "\nHere\r\n");
+  if (ep1 == -1) {
+    for (sw1 = 0; sw1 < (sizeof(RFswitch)/sizeof(PE42526_t)); sw1++)
+      for (sw2 = 0; sw2 < (sizeof(RFswitch)/sizeof(PE42526_t)); sw2++) {
+	pins = routing_table[sw1][sw2];
+	if (pins.pin1 != NO_PIN) {
+	  int cond;
+	  cond = RFswitch[sw1].connection_active(&RFswitch[sw1], pins.pin1) && \
+	    RFswitch[sw2].connection_active(&RFswitch[sw2], pins.pin2);
+	  if (cond) {
+	    if (ptr > reply)
+	      *ptr++ = ',';
+	    *ptr++ = sw1+65;
+	    *ptr++ = sw2+65;
+	  }
+	}
+      }
+  } else {
+    pins = routing_table[ep1][ep2];
+    if (pins.pin1 != NO_PIN) {
+      int cond;
+      cond = RFswitch[ep1].connection_active(&RFswitch[ep1], pins.pin1) && \
+	RFswitch[ep2].connection_active(&RFswitch[ep2], pins.pin2);
+      if (cond) {
+	*ptr++ = ep1+65;
+	*ptr++ = ep2+65;
+      }
+    } else {
+      /* Invalid connection */
+      retval = -1;
+    }
+  }
+  strcpy(reply_buffer, reply);
+  return retval;
+}
 void routing_disconnect_all(void)
 {
-  int sw, sw1, sw2;
+  int sw;
   for (sw = 0; sw < (sizeof(RFswitch)/sizeof(PE42526_t)); sw++)
-    RFswitch[sw].switch_off(RFswitch[sw]);
-
-  for (sw1 = 0; sw1 < (sizeof(RFswitch)/sizeof(PE42526_t)); sw1++)
-    for (sw2 = 0; sw2 < (sizeof(RFswitch)/sizeof(PE42526_t)); sw2++)
-      routing_table[sw1][sw2].active = 0;
+    RFswitch[sw].switch_off(&RFswitch[sw]);
 }
