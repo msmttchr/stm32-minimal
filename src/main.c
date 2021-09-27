@@ -8,6 +8,7 @@
 #include "scpi/scpi.h"
 #include "scpi-def.h"
 #include "periph.h"
+#include "routing.h"
 
 void     SystemClock_Config(void);
 size_t SCPI_Write(scpi_t * context, const char * data, size_t len) {
@@ -77,6 +78,9 @@ int main(void){
   /* Configure USARTx (USART IP configuration and related GPIO initialization) */
   Configure_USART();
 
+  /* Switch initialization */
+  routing_init();
+
   my_fprintf(stderr, "%s", welcome_message);
     
   SCPI_Init(&scpi_context,
@@ -92,7 +96,6 @@ int main(void){
 
   return 0;
 }
-
 
 /******************************************************************************/
 /*   IRQ HANDLER TREATMENT Functions                                          */

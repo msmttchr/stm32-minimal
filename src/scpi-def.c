@@ -41,9 +41,11 @@
 #include "scpi/scpi.h"
 #include "scpi-def.h"
 #include <ctype.h>
+#include "routing.h"
 
 static scpi_result_t route_open_all(scpi_t * context)
 {
+  routing_disconnect_all();
   return SCPI_RES_OK;
 }
 #if 0
@@ -230,6 +232,7 @@ static scpi_result_t route_connect(scpi_t * context) {
       return res;
 
     /* Make the connection */
+    routing_connection(buffer[0], buffer[1]);
     my_fprintf(stderr, "ROUTE:CONNECT: ***%c->%c(%d)***\r\n", buffer[0], buffer[1], copy_len);
 
     return SCPI_RES_OK;
