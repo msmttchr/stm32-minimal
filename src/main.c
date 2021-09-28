@@ -59,6 +59,12 @@ void SystemClock_Config(void){
   LL_Init1msTick(SystemCoreClock);
 }
 
+static char command_buffer[256];
+static volatile int command_size = 0;
+
+#define SCPI_ERROR_INFO_HEAP_SIZE 512
+static char error_info_heap[SCPI_ERROR_INFO_HEAP_SIZE];
+
 int main(void){
   const char *welcome_message = "RF Switch 7 Channels (A-G) " SCPI_IDN2 " version " SCPI_IDN4 "\r\n(c) 2021 STMictroelectronics RF Team\r\n";
 
@@ -82,7 +88,7 @@ int main(void){
   routing_init();
 
   my_fprintf(stderr, "%s", welcome_message);
-    
+
   SCPI_Init(&scpi_context,
             scpi_commands,
             &scpi_interface,
@@ -91,9 +97,18 @@ int main(void){
             scpi_input_buffer, SCPI_INPUT_BUFFER_LENGTH,
             scpi_error_queue_data, SCPI_ERROR_QUEUE_SIZE);
 
+#if USE_DEVICE_DEPENDENT_ERROR_INFORMATION && !USE_MEMORY_ALLOCATION_FREE
+    SCPI_InitHeap(&scpi_context,
+            error_info_heap, SCPI_ERROR_INFO_HEAP_SIZE);
+#endif
   /* Toggle forever */
-  LED_Blinking(LED_BLINK_SLOW);
-
+  //LED_Blinking(LED_BLINK_SLOW);
+  while (1) {
+    if (command_size > 0) {
+      SCPI_Input(&scpi_context, command_buffer, command_size);
+      command_size = 0;
+    }
+  }
   return 0;
 }
 
@@ -129,7 +144,10 @@ void USART_CharReception_Callback(void)
   LL_USART_TransmitData8(USARTx_INSTANCE, line[index-1]);
 #endif
   if ((index == sizeof(line)) || (line[index-1] == '\n')) {
-    SCPI_Input(&scpi_context, line, index);
+    if (command_size == 0) {
+      memcpy(command_buffer, line, index);
+      command_size = index;
+    }
     index = 0;
   }
 }
