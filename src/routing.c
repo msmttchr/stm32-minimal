@@ -175,13 +175,13 @@ int routing_connection(char ep1, char ep2)
   return 0;
 }
 
-int routing_connection_query(char *endpoints, char *reply_buffer)
+int routing_connection_query(char *endpoints, char *reply_buffer, int only_active)
 {
   int ep1 = -1;
   int ep2 = -1;
   int sw1, sw2;
   int retval = 0;
-  char reply[32];
+  char reply[128];
   char *ptr=reply;
   routing_table_item_t pins;
   
@@ -190,15 +190,14 @@ int routing_connection_query(char *endpoints, char *reply_buffer)
     ep2 = endpoints[1] - 'A';
   }
   memset (reply, 0, sizeof(reply));
-  my_fprintf(stderr, "\nHere\r\n");
   if (ep1 == -1) {
     for (sw1 = 0; sw1 < (sizeof(RFswitch)/sizeof(PE42526_t)); sw1++)
       for (sw2 = 0; sw2 < (sizeof(RFswitch)/sizeof(PE42526_t)); sw2++) {
 	pins = routing_table[sw1][sw2];
 	if (pins.pin1 != NO_PIN) {
 	  int cond;
-	  cond = RFswitch[sw1].connection_active(&RFswitch[sw1], pins.pin1) && \
-	    RFswitch[sw2].connection_active(&RFswitch[sw2], pins.pin2);
+	  cond = (RFswitch[sw1].connection_active(&RFswitch[sw1], pins.pin1) && \
+		  RFswitch[sw2].connection_active(&RFswitch[sw2], pins.pin2)) | !only_active;
 	  if (cond) {
 	    if (ptr > reply)
 	      *ptr++ = ',';
@@ -211,8 +210,8 @@ int routing_connection_query(char *endpoints, char *reply_buffer)
     pins = routing_table[ep1][ep2];
     if (pins.pin1 != NO_PIN) {
       int cond;
-      cond = RFswitch[ep1].connection_active(&RFswitch[ep1], pins.pin1) && \
-	RFswitch[ep2].connection_active(&RFswitch[ep2], pins.pin2);
+      cond = (RFswitch[ep1].connection_active(&RFswitch[ep1], pins.pin1) && \
+	      RFswitch[ep2].connection_active(&RFswitch[ep2], pins.pin2)) | !only_active;
       if (cond) {
 	*ptr++ = ep1+65;
 	*ptr++ = ep2+65;
