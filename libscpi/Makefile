@@ -12,7 +12,7 @@ CFLAGS += -mfloat-abi=soft
 CFLAGS += -Wall -g -std=c99 -Os -fno-strict-aliasing
 CFLAGS += -mlittle-endian -mcpu=cortex-m3 -mthumb
 
-CFLAGS+=-I. -DUSE_FULL_ERROR_LIST
+CFLAGS+=-I. -DUSE_FULL_ERROR_LIST -DUSE_DEVICE_DEPENDENT_ERROR_INFORMATION -DUSE_MEMORY_ALLOCATION_FREE=0
 CFLAGS += -Wextra -Wmissing-prototypes -Wimplicit -Iinc
 
 LDFLAGS += -lm -Wl,--as-needed

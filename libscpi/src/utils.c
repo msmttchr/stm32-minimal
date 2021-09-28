@@ -851,11 +851,11 @@ scpi_bool_t scpiheap_get_parts(scpi_error_info_heap_t * heap, const char * s, si
 
     *len1 = 0;
     size_t rem = heap->size - (s - heap->data);
-    *len1 = strnlen(s, rem);
+    *len1 = SCPIDEFINE_strnlen(s, rem);
 
     if (&s[*len1 - 1] == &heap->data[heap->size - 1]) {
         *s2 = heap->data;
-        *len2 = strnlen(*s2, heap->size);
+        *len2 = SCPIDEFINE_strnlen(*s2, heap->size);
     } else {
         *s2 = NULL;
         *len2 = 0;
