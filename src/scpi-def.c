@@ -241,28 +241,40 @@ static scpi_result_t route_connect(scpi_t * context) {
 
 static scpi_result_t route_connect_query (scpi_t * context) {
     char buffer[32];
-    char buffer_out[32];
+    char buffer_out[128];
     size_t copy_len=0;
-    scpi_result_t res;
+    scpi_result_t res = SCPI_RES_OK;
     int retval;
     char *param = buffer;
+    int active_connection_only = 1;
 
     /* read first parameter if present */
     if (!SCPI_ParamCopyText(context, buffer, sizeof (buffer), &copy_len, FALSE)) {
         param = NULL;
 	buffer[0] = '\0';
     } else {
-      res = _check_path_param(context, buffer, copy_len);
-      if (res != SCPI_RES_OK)
-	return res;
+      if (strcmp(param, "ALL") == 0) {
+        param = NULL;
+	buffer[0] = '\0';
+	active_connection_only = 0;
+      }	else {
+	res = _check_path_param(context, buffer, copy_len);
+      }
     }
 
     /* Query the connection */
-    my_fprintf(stderr, "\tQuery %s(%d)\r\n", buffer, copy_len);
-    retval = routing_connection_query(param, buffer_out);
-    my_fprintf(stderr, "\tQuery res %d(%s)\r\n", retval, buffer_out);
+    //my_fprintf(stderr, "\tQuery %s(%d)\r\n", buffer, copy_len);
+    if (res == SCPI_RES_OK) {
+      retval = routing_connection_query(param, buffer_out, active_connection_only);
+    //my_fprintf(stderr, "\tQuery res %d(%s)\r\n", retval, buffer_out);
+      res = retval ? SCPI_RES_ERR : res;
+      if (res == SCPI_RES_ERR)
+	SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Unsupported connection", 0);
+      else
+	SCPI_ResultText(context, buffer_out);
+    }
 
-    return SCPI_RES_OK;
+    return res;
 }
 
 static scpi_result_t TEST_ArbQ(scpi_t * context) {
@@ -471,8 +483,8 @@ const scpi_command_t scpi_commands[] = {
     {.pattern = "ROUTE:CLOSe",           .callback = TEST_Chanlst,},
     {.pattern = "ROUTE:CLOSe:STATe?",    .callback = SCPI_StubQ,},
     {.pattern = "ROUTE:CONNEct",         .callback = route_connect,},
-    {.pattern = "ROUTE:CONNEct?",        .callback = route_connect_query,},
-    {.pattern = "ROUTE:OPEN:STATe?",     .callback = SCPI_StubQ,},
+    {.pattern = "ROUTE:CONNEct?",        .callback = route_connect_query,}, /* ROUTE:CONNEct? (active connection) ROUTE:CONNEct? "AB" (AB connected)  ROUTE:CONNEct? "ALL" all possible connections */
+    {.pattern = "ROUTE:OPEN",            .callback = route_open_all,},
     {.pattern = "ROUTE:OPEN:ALL",        .callback = route_open_all,},
     {.pattern = "ROUTE:ATTenuation?",    .callback = SCPI_StubQ,}, /* Report attenuation for a path (@1,2) at given <frequency> or all frequencies (frequency points) */
     {.pattern = "ROUTE:ATTenuation:FREQuency:START?",    .callback = SCPI_StubQ,}, /* Start frequencys available */
