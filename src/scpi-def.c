@@ -42,6 +42,7 @@
 #include "scpi-def.h"
 #include <ctype.h>
 #include "routing.h"
+#include "attenuation.h"
 
 static scpi_result_t route_open_all(scpi_t * context)
 {
@@ -133,6 +134,48 @@ static scpi_result_t route_connect(scpi_t * context) {
   }
 
   return res;
+}
+
+static scpi_result_t att_frequency_start (scpi_t * context) {
+    SCPI_ResultInt64(context, ATTENUATION_BASE_FREQUENCY);
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t att_frequency_step (scpi_t * context) {
+    SCPI_ResultInt64(context, ATTENUATION_STEP_FREQUENCY);
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t att_frequency_points (scpi_t * context) {
+    SCPI_ResultInt32(context, ATTENUATION_POINTS_FREQUENCY);
+    return SCPI_RES_OK;
+}
+
+static scpi_result_t att_frequency_query (scpi_t * context) {
+    char buffer_out[128];
+    scpi_result_t res = SCPI_RES_OK;
+    int retval;
+    const char *param;
+    size_t param_len;
+    
+    int active_connection_only = 1;
+
+    /* read first parameter if present */
+    if (SCPI_ParamCharacters(context, &param, &param_len, TRUE)) {
+      res = _check_path_param(context, (char *) param, param_len);
+    }
+
+    /* Query the connection */
+    if (res == SCPI_RES_OK) {
+      retval = routing_connection_query((char *) param, buffer_out, active_connection_only);
+      res = retval ? SCPI_RES_ERR : res;
+      if (res == SCPI_RES_ERR)
+	SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Unsupported connection", 0);
+      else
+	SCPI_ResultCharacters(context, buffer_out, strlen(buffer_out));
+    }
+
+    return res;
 }
 
 static scpi_result_t route_connect_query (scpi_t * context) {
@@ -367,10 +410,10 @@ const scpi_command_t scpi_commands[] = {
     {.pattern = "ROUTE:CONNEct?",        .callback = route_connect_query,}, /* ROUTE:CONNEct? (active connection) ROUTE:CONNEct? "AB" (AB connected)  ROUTE:CONNEct? "ALL" all possible connections */
     {.pattern = "ROUTE:OPEN",            .callback = route_open_all,},
     {.pattern = "ROUTE:OPEN:ALL",        .callback = route_open_all,},
-    {.pattern = "ROUTE:ATTenuation?",    .callback = SCPI_StubQ,}, /* Report attenuation for a path (@1,2) at given <frequency> or all frequencies (frequency points) */
-    {.pattern = "ROUTE:ATTenuation:FREQuency:START?",    .callback = SCPI_StubQ,}, /* Start frequencys available */
-    {.pattern = "ROUTE:ATTenuation:FREQuency:STEP?",    .callback = SCPI_StubQ,}, /* Step frequency available */
-    {.pattern = "ROUTE:ATTenuation:FREQuency:POINts?",    .callback = SCPI_StubQ,}, /* Number of points available */
+    {.pattern = "ROUTE:ATTenuation?",    .callback = att_frequency_query,}, /* Report attenuation for a path (@1,2) at given <frequency> or all frequencies (frequency points) */
+    {.pattern = "ROUTE:ATTenuation:FREQuency:START?",    .callback = att_frequency_start,}, /* Start frequencys available */
+    {.pattern = "ROUTE:ATTenuation:FREQuency:STEP?",    .callback = att_frequency_step,}, /* Step frequency available */
+    {.pattern = "ROUTE:ATTenuation:FREQuency:POINts?",    .callback = att_frequency_points,}, /* Number of points available */
 #if 0
     {.pattern = "ROUTe:PATH:CATalog?",     .callback = SCPI_StubQ,},
     {.pattern = "SYSTem:COMMunication:TCPIP:CONTROL?", .callback = SCPI_SystemCommTcpipControlQ,},
