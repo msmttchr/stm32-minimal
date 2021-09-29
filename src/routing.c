@@ -147,6 +147,9 @@ void routing_init(void)
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOD);
+
+  set_gpio_pin(GPIOC, LL_GPIO_PIN_12, 1);
+
   for (i = 0; i < sizeof(RFswitch)/sizeof(PE42526_t); i++) {
     RFswitch[i].init = switch_init;
     RFswitch[i].connection = switch_connection;
@@ -229,4 +232,13 @@ void routing_disconnect_all(void)
   int sw;
   for (sw = 0; sw < (sizeof(RFswitch)/sizeof(PE42526_t)); sw++)
     RFswitch[sw].switch_off(&RFswitch[sw]);
+}
+int routing_disconnection(char ep1, char ep2)
+{
+  int sw1 = ep1 - 'A';
+  int sw2 = ep2 - 'A';
+
+  RFswitch[sw1].switch_off(&RFswitch[sw1]);
+  RFswitch[sw2].switch_off(&RFswitch[sw2]);
+  return 0;
 }

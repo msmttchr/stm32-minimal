@@ -48,139 +48,6 @@ static scpi_result_t route_open_all(scpi_t * context)
   routing_disconnect_all();
   return SCPI_RES_OK;
 }
-#if 0
-static scpi_result_t DMM_MeasureVoltageDcQ(scpi_t * context) {
-    scpi_number_t param1, param2;
-    char bf[15];
-    my_fprintf(stderr, "meas:volt:dc\r\n"); /* debug command name */
-
-    /* read first parameter if present */
-    if (!SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, FALSE)) {
-        /* do something, if parameter not present */
-    }
-
-    /* read second paraeter if present */
-    if (!SCPI_ParamNumber(context, scpi_special_numbers_def, &param2, FALSE)) {
-        /* do something, if parameter not present */
-    }
-
-
-    SCPI_NumberToStr(context, scpi_special_numbers_def, &param1, bf, 15);
-    my_fprintf(stderr, "\tP1=%s\r\n", bf);
-
-
-    SCPI_NumberToStr(context, scpi_special_numbers_def, &param2, bf, 15);
-    my_fprintf(stderr, "\tP2=%s\r\n", bf);
-
-    SCPI_ResultDouble(context, 0);
-    return SCPI_RES_OK;
-}
-static scpi_result_t DMM_MeasureVoltageAcQ(scpi_t * context) {
-    scpi_number_t param1, param2;
-    char bf[15];
-    my_fprintf(stderr, "meas:volt:ac\r\n"); /* debug command name */
-
-    /* read first parameter if present */
-    if (!SCPI_ParamNumber(context, scpi_special_numbers_def, &param1, FALSE)) {
-        /* do something, if parameter not present */
-    }
-
-    /* read second paraeter if present */
-    if (!SCPI_ParamNumber(context, scpi_special_numbers_def, &param2, FALSE)) {
-        /* do something, if parameter not present */
-    }
-
-
-    SCPI_NumberToStr(context, scpi_special_numbers_def, &param1, bf, 15);
-    my_fprintf(stderr, "\tP1=%s\r\n", bf);
-
-
-    SCPI_NumberToStr(context, scpi_special_numbers_def, &param2, bf, 15);
-    my_fprintf(stderr, "\tP2=%s\r\n", bf);
-
-    SCPI_ResultDouble(context, 0);
-    return SCPI_RES_OK;
-}
-
-static scpi_result_t DMM_ConfigureVoltageDc(scpi_t * context) {
-    double param1, param2;
-    my_fprintf(stderr, "conf:volt:dc\r\n"); /* debug command name */
-
-    /* read first parameter if present */
-    if (!SCPI_ParamDouble(context, &param1, TRUE)) {
-        return SCPI_RES_ERR;
-    }
-
-    /* read second paraeter if present */
-    if (!SCPI_ParamDouble(context, &param2, FALSE)) {
-        /* do something, if parameter not present */
-    }
-
-    my_fprintf(stderr, "\tP1=%lf\r\n", param1);
-    my_fprintf(stderr, "\tP2=%lf\r\n", param2);
-    return SCPI_RES_OK;
-}
-#endif
-static scpi_result_t TEST_Bool(scpi_t * context) {
-    scpi_bool_t param1;
-    my_fprintf(stderr, "TEST:BOOL\r\n"); /* debug command name */
-
-    /* read first parameter if present */
-    if (!SCPI_ParamBool(context, &param1, TRUE)) {
-        return SCPI_RES_ERR;
-    }
-
-    my_fprintf(stderr, "\tP1=%d\r\n", param1);
-
-    return SCPI_RES_OK;
-}
-
-scpi_choice_def_t trigger_source[] = {
-    {"BUS", 5},
-    {"IMMediate", 6},
-    {"EXTernal", 7},
-    SCPI_CHOICE_LIST_END /* termination of option list */
-};
-
-static scpi_result_t TEST_ChoiceQ(scpi_t * context) {
-
-    int32_t param;
-    const char * name;
-
-    if (!SCPI_ParamChoice(context, trigger_source, &param, TRUE)) {
-        return SCPI_RES_ERR;
-    }
-
-    SCPI_ChoiceToName(trigger_source, param, &name);
-    my_fprintf(stderr, "\tP1=%s (%ld)\r\n", name, (long int) param);
-
-    SCPI_ResultInt32(context, param);
-
-    return SCPI_RES_OK;
-}
-
-static scpi_result_t TEST_Numbers(scpi_t * context) {
-    int32_t numbers[2];
-
-    SCPI_CommandNumbers(context, numbers, 2, 1);
-
-    my_fprintf(stderr, "TEST numbers %d %d\r\n", numbers[0], numbers[1]);
-
-    return SCPI_RES_OK;
-}
-
-static scpi_result_t TEST_Text(scpi_t * context) {
-    char buffer[100];
-    size_t copy_len;
-
-    if (!SCPI_ParamCopyText(context, buffer, sizeof (buffer), &copy_len, FALSE)) {
-        buffer[0] = '\0';
-    }
-
-    my_fprintf(stderr, "TEXT: ***%s***\r\n", buffer);
-
-    return SCPI_RES_OK;
-}
 
 static scpi_result_t _check_path_param(scpi_t * context, char *param, size_t len)
 {
@@ -218,76 +85,91 @@ static scpi_result_t _check_path_param(scpi_t * context, char *param, size_t len
     return SCPI_RES_OK;
 }
 
-static scpi_result_t route_connect(scpi_t * context) {
-    char buffer[100];
-    size_t copy_len = 0;
-    scpi_result_t res;
-    int retval = 0;
-    
-    if (!SCPI_ParamCopyText(context, buffer, sizeof (buffer), &copy_len, TRUE)) {
-      return SCPI_RES_ERR;
+static scpi_result_t route_disconnect(scpi_t * context) {
+  scpi_result_t res;
+  const char *param;
+  size_t param_len;
+  
+  /* read first parameter */
+  if (!SCPI_ParamCharacters(context, &param, &param_len, TRUE)) {
+    res = SCPI_RES_ERR;
+  }
+
+  if (res == SCPI_RES_OK) {
+    res = _check_path_param(context, (char *) param, param_len);
+  }
+
+  if (res == SCPI_RES_OK) {
+    /* Do the disconnection */
+    if (routing_disconnection(param[0], param[1])) {
+      SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Unsupported connection", 0);
+      res = SCPI_RES_ERR;
     }
+  }
 
-    res = _check_path_param(context, buffer, copy_len);
-    if (res != SCPI_RES_OK)
-      return res;
+  return res;
+}
 
-    /* Make the connection */
-    retval = routing_connection(buffer[0], buffer[1]);
-    my_fprintf(stderr, "ROUTE:CONNECT: ***%c->%c(%d)***\r\n", buffer[0], buffer[1], retval);
+static scpi_result_t route_connect(scpi_t * context) {
+  scpi_result_t res = SCPI_RES_OK;
+  const char *param;
+  size_t param_len;
+  
+  /* read first parameter if present */
+  if (!SCPI_ParamCharacters(context, &param, &param_len, TRUE)) {
+    res = SCPI_RES_ERR;
+  }
 
-    return SCPI_RES_OK;
+  if (res == SCPI_RES_OK) {
+    res = _check_path_param(context, (char *) param, param_len);
+  }
+
+  /* Make the connection */
+  if (res == SCPI_RES_OK) {
+    if (routing_connection(param[0], param[1])) {
+      SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Unsupported connection", 0);
+      res = SCPI_RES_ERR;
+    }
+  }
+
+  return res;
 }
 
 static scpi_result_t route_connect_query (scpi_t * context) {
-    char buffer[32];
     char buffer_out[128];
-    size_t copy_len=0;
     scpi_result_t res = SCPI_RES_OK;
     int retval;
-    char *param = buffer;
+    const char *param;
+    size_t param_len;
+    
     int active_connection_only = 1;
 
     /* read first parameter if present */
-    if (!SCPI_ParamCopyText(context, buffer, sizeof (buffer), &copy_len, FALSE)) {
-        param = NULL;
-	buffer[0] = '\0';
+    if (!SCPI_ParamCharacters(context, &param, &param_len, FALSE)) {
+      param = NULL;
+      param_len = 0;
     } else {
-      if (strcmp(param, "ALL") == 0) {
-        param = NULL;
-	buffer[0] = '\0';
+      if (strncmp(param, "ALL", param_len) == 0) {
+	param = NULL;
+	param_len = 0;
 	active_connection_only = 0;
       }	else {
-	res = _check_path_param(context, buffer, copy_len);
+	res = _check_path_param(context, (char *) param, param_len);
       }
     }
 
     /* Query the connection */
-    //my_fprintf(stderr, "\tQuery %s(%d)\r\n", buffer, copy_len);
     if (res == SCPI_RES_OK) {
-      retval = routing_connection_query(param, buffer_out, active_connection_only);
-    //my_fprintf(stderr, "\tQuery res %d(%s)\r\n", retval, buffer_out);
+      retval = routing_connection_query((char *) param, buffer_out, active_connection_only);
       res = retval ? SCPI_RES_ERR : res;
       if (res == SCPI_RES_ERR)
 	SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Unsupported connection", 0);
       else
-	SCPI_ResultText(context, buffer_out);
+	SCPI_ResultCharacters(context, buffer_out, strlen(buffer_out));
     }
 
     return res;
 }
-
-static scpi_result_t TEST_ArbQ(scpi_t * context) {
-    const char * data;
-    size_t len;
-
-    if (SCPI_ParamArbitraryBlock(context, &data, &len, FALSE)) {
-        SCPI_ResultArbitraryBlock(context, data, len);
-    }
-
-    return SCPI_RES_OK;
-}
-
 
 struct _scpi_channel_value_t {
     int32_t row;
@@ -412,8 +294,6 @@ static scpi_result_t TEST_Chanlst(scpi_t *context) {
                             for_stop_row = TRUE;
                         }
                     }
-
-
                 } else {
                     return SCPI_RES_ERR;
                 }
@@ -482,6 +362,7 @@ const scpi_command_t scpi_commands[] = {
     /* Signal Switchers */
     {.pattern = "ROUTE:CLOSe",           .callback = TEST_Chanlst,},
     {.pattern = "ROUTE:CLOSe:STATe?",    .callback = SCPI_StubQ,},
+    {.pattern = "ROUTE:DISCONnect",      .callback = route_disconnect,},
     {.pattern = "ROUTE:CONNEct",         .callback = route_connect,},
     {.pattern = "ROUTE:CONNEct?",        .callback = route_connect_query,}, /* ROUTE:CONNEct? (active connection) ROUTE:CONNEct? "AB" (AB connected)  ROUTE:CONNEct? "ALL" all possible connections */
     {.pattern = "ROUTE:OPEN",            .callback = route_open_all,},
@@ -494,12 +375,6 @@ const scpi_command_t scpi_commands[] = {
     {.pattern = "ROUTe:PATH:CATalog?",     .callback = SCPI_StubQ,},
     {.pattern = "SYSTem:COMMunication:TCPIP:CONTROL?", .callback = SCPI_SystemCommTcpipControlQ,},
 #endif
-    {.pattern = "TEST:BOOL", .callback = TEST_Bool,},
-    {.pattern = "TEST:CHOice?", .callback = TEST_ChoiceQ,},
-    {.pattern = "TEST#:NUMbers#", .callback = TEST_Numbers,},
-    {.pattern = "TEST:TEXT", .callback = TEST_Text,},
-    {.pattern = "TEST:ARBitrary?", .callback = TEST_ArbQ,},
-    {.pattern = "TEST:CHANnellist", .callback = TEST_Chanlst,},
     SCPI_CMD_LIST_END
 };
 
