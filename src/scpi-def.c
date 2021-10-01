@@ -88,12 +88,13 @@ static scpi_result_t _check_path_param(scpi_t * context, char *param, size_t len
 }
 
 static scpi_result_t route_disconnect(scpi_t * context) {
-  scpi_result_t res;
+  scpi_result_t res = SCPI_RES_OK;
   const char *param;
   size_t param_len;
   
   /* read first parameter */
   if (!SCPI_ParamCharacters(context, &param, &param_len, TRUE)) {
+    my_fprintf(stderr, "Here\r\n");
     res = SCPI_RES_ERR;
   }
 
@@ -117,7 +118,7 @@ static scpi_result_t route_connect(scpi_t * context) {
   const char *param;
   size_t param_len;
   
-  /* read first parameter if present */
+  /* read first parameter */
   if (!SCPI_ParamCharacters(context, &param, &param_len, TRUE)) {
     res = SCPI_RES_ERR;
   }
