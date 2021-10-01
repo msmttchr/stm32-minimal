@@ -43,6 +43,7 @@
 #include <ctype.h>
 #include "routing.h"
 #include "attenuation.h"
+#include "system_def.h"
 
 static scpi_result_t route_open_all(scpi_t * context)
 {
@@ -137,45 +138,80 @@ static scpi_result_t route_connect(scpi_t * context) {
 }
 
 static scpi_result_t att_frequency_start (scpi_t * context) {
-    SCPI_ResultInt64(context, ATTENUATION_BASE_FREQUENCY);
-    return SCPI_RES_OK;
+  SCPI_ResultInt64(context, ATTENUATION_BASE_FREQUENCY);
+  return SCPI_RES_OK;
 }
 
 static scpi_result_t att_frequency_step (scpi_t * context) {
-    SCPI_ResultInt64(context, ATTENUATION_STEP_FREQUENCY);
-    return SCPI_RES_OK;
+  SCPI_ResultInt64(context, ATTENUATION_STEP_FREQUENCY);
+  return SCPI_RES_OK;
 }
 
 static scpi_result_t att_frequency_points (scpi_t * context) {
-    SCPI_ResultInt32(context, ATTENUATION_POINTS_FREQUENCY);
-    return SCPI_RES_OK;
+  SCPI_ResultInt32(context, ATTENUATION_POINTS_FREQUENCY);
+  return SCPI_RES_OK;
 }
 
 static scpi_result_t att_frequency_query (scpi_t * context) {
-    char buffer_out[128];
-    scpi_result_t res = SCPI_RES_OK;
-    int retval;
-    const char *param;
-    size_t param_len;
-    
-    int active_connection_only = 1;
+  scpi_result_t res = SCPI_RES_OK;
+  const char *param;
+  size_t param_len;
+  int sw1, sw2;
+  int64_t frequency;
+  int64_t frequency_max = ATTENUATION_BASE_FREQUENCY+((int64_t) (ATTENUATION_POINTS_FREQUENCY - 1))*ATTENUATION_STEP_FREQUENCY;
+  const attenuation_t *att;
 
-    /* read first parameter if present */
-    if (SCPI_ParamCharacters(context, &param, &param_len, TRUE)) {
-      res = _check_path_param(context, (char *) param, param_len);
+  /* read first parameter, if present */
+  if (SCPI_ParamCharacters(context, &param, &param_len, TRUE)) {
+    res = _check_path_param(context, (char *) param, param_len);
+  }
+
+  if (res == SCPI_RES_OK) {
+    sw1 = param[0] - 'A';
+    sw2 = param[1] - 'A';
+
+    att = attenuation_table[sw1][sw2];
+
+    /* read second parameter, if present */
+    if (!SCPI_ParamInt64(context, &frequency, FALSE)) {
+      frequency = -1;
+    } else {
+      if ((frequency < ATTENUATION_BASE_FREQUENCY) ||
+	  (frequency > frequency_max)) {
+	SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_DATA_OUT_OF_RANGE, NULL, 0);
+	res = SCPI_RES_ERR;
+      }
     }
+  }
 
-    /* Query the connection */
-    if (res == SCPI_RES_OK) {
-      retval = routing_connection_query((char *) param, buffer_out, active_connection_only);
-      res = retval ? SCPI_RES_ERR : res;
-      if (res == SCPI_RES_ERR)
-	SCPI_ErrorPushEx(&scpi_context, SCPI_ERROR_INVAL_CHARACTER_DATA, "Unsupported connection", 0);
-      else
-	SCPI_ResultCharacters(context, buffer_out, strlen(buffer_out));
+  /* Query the attenuation */
+
+  if (res == SCPI_RES_OK) {
+    if (frequency == -1) {
+      SCPI_ResultArrayUInt16(context,
+			     att,
+			     ATTENUATION_POINTS_FREQUENCY,
+			     SCPI_FORMAT_ASCII);
+    } else {
+      /* Output value for closest frequencies */
+      int32_t step = (frequency - ATTENUATION_BASE_FREQUENCY)/ATTENUATION_STEP_FREQUENCY;
+      int32_t step_next = (step < (ATTENUATION_POINTS_FREQUENCY-1)) ? step + 1: step;
+      
+      int64_t array[4] = {
+	ATTENUATION_BASE_FREQUENCY+step*(int64_t)ATTENUATION_STEP_FREQUENCY,
+	att[step],
+	ATTENUATION_BASE_FREQUENCY+step_next*(int64_t)ATTENUATION_STEP_FREQUENCY,
+	att[step_next]
+      };
+
+      SCPI_ResultArrayInt64(context,
+			     array,
+			     4,
+			     SCPI_FORMAT_ASCII);
     }
+  }
 
-    return res;
+  return res;
 }
 
 static scpi_result_t route_connect_query (scpi_t * context) {
