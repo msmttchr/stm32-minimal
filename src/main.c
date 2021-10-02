@@ -9,6 +9,7 @@
 #include "scpi-def.h"
 #include "periph.h"
 #include "routing.h"
+#include "fifo.h"
 
 void     SystemClock_Config(void);
 size_t SCPI_Write(scpi_t * context, const char * data, size_t len) {
@@ -59,8 +60,8 @@ void SystemClock_Config(void){
   LL_Init1msTick(SystemCoreClock);
 }
 
-static char command_buffer[256];
-static volatile int command_size = 0;
+static uint8_t buffer[256];
+circular_fifo_t uart_fifo;
 
 #define SCPI_ERROR_INFO_HEAP_SIZE 512
 static char error_info_heap[SCPI_ERROR_INFO_HEAP_SIZE];
@@ -77,6 +78,9 @@ int main(void){
     
   /* Set LED2 Off */
   LED_Off();
+
+  /* Init UART FIFO */
+  fifo_init1(&uart_fifo, sizeof(buffer), buffer, 1);
     
   /* Initialize button in EXTI mode */
   UserButton_Init();
@@ -104,9 +108,10 @@ int main(void){
   /* Toggle forever */
   //LED_Blinking(LED_BLINK_SLOW);
   while (1) {
-    if (command_size > 0) {
-      SCPI_Input(&scpi_context, command_buffer, command_size);
-      command_size = 0;
+    if (fifo_size(&uart_fifo) > 0) {
+      uint8_t byte;
+      fifo_get(&uart_fifo, 1, &byte);
+      SCPI_Input(&scpi_context, (const char *) &byte, 1);
     }
   }
   return 0;
@@ -134,22 +139,11 @@ void UserButton_Callback(void)
  */
 void USART_CharReception_Callback(void)
 {
-  static char line[256];
-  static int index=0;
+  uint8_t byte;
 
   /* Read Received character. RXNE flag is cleared by reading of DR register */
-  line[index++] = (char) LL_USART_ReceiveData8(USARTx_INSTANCE);
-#ifdef UART_ECHO
-  /* Echo received character on TX */
-  LL_USART_TransmitData8(USARTx_INSTANCE, line[index-1]);
-#endif
-  if ((index == sizeof(line)) || (line[index-1] == '\n')) {
-    if (command_size == 0) {
-      memcpy(command_buffer, line, index);
-      command_size = index;
-    }
-    index = 0;
-  }
+  byte = (uint8_t) LL_USART_ReceiveData8(USARTx_INSTANCE);
+  fifo_put(&uart_fifo, 1, &byte);
 }
 
 /**
