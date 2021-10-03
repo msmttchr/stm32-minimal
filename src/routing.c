@@ -242,3 +242,13 @@ int routing_disconnection(char ep1, char ep2)
   RFswitch[sw2].switch_off(&RFswitch[sw2]);
   return 0;
 }
+int routing_idle(void)
+{
+  int sw, retval=1;
+  for (sw = 0; sw < (sizeof(RFswitch)/sizeof(PE42526_t)); sw++)
+    if (!RFswitch[sw].connection_active(&RFswitch[sw], RFC)) {
+      retval = 0;
+      break;
+    }
+  return retval;
+}

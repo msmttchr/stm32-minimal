@@ -12,6 +12,9 @@
 #include "fifo.h"
 
 void     SystemClock_Config(void);
+void LEDTask(void);
+void UserButtonTask(void);
+
 size_t SCPI_Write(scpi_t * context, const char * data, size_t len) {
   (void) context;
   return USART_TxBuffer((uint8_t *)data, len);
@@ -57,7 +60,6 @@ void SystemClock_Config(void){
     
   LL_PLL_ConfigSystemClock_HSI(&sUTILS_PLLInitStruct, &sUTILS_ClkInitStruct);
     
-  LL_Init1msTick(SystemCoreClock);
 }
 
 static uint8_t buffer[256];
@@ -65,6 +67,7 @@ circular_fifo_t uart_fifo;
 
 #define SCPI_ERROR_INFO_HEAP_SIZE 512
 static char error_info_heap[SCPI_ERROR_INFO_HEAP_SIZE];
+static uint32_t systick_counter = 0;
 
 int main(void){
   const char *welcome_message = "RF Switch 7 Channels (A-G) " SCPI_IDN2 " version " SCPI_IDN4 "\r\n(c) 2021 STMictroelectronics RF Team\r\n";
@@ -88,6 +91,9 @@ int main(void){
   /* Configure USARTx (USART IP configuration and related GPIO initialization) */
   Configure_USART();
 
+  /* Configure SysTick */
+  Configure_SysTick();
+
   /* Switch initialization */
   routing_init();
 
@@ -105,16 +111,45 @@ int main(void){
     SCPI_InitHeap(&scpi_context,
             error_info_heap, SCPI_ERROR_INFO_HEAP_SIZE);
 #endif
-  /* Toggle forever */
-  //LED_Blinking(LED_BLINK_SLOW);
   while (1) {
+    /* Manage SCPI commands */
     if (fifo_size(&uart_fifo) > 0) {
       uint8_t byte;
       fifo_get(&uart_fifo, 1, &byte);
       SCPI_Input(&scpi_context, (const char *) &byte, 1);
     }
+    /* LED blinking task */
+    LEDTask();
+    /* Manage buttons actions */
+    UserButtonTask();
   }
   return 0;
+}
+
+void LEDTask(void)
+{
+  static uint16_t blinking_speed = LED_BLINK_NORMAL;
+  static uint32_t last_systick_counter;
+  uint32_t current_systick_counter, next_systick_counter;
+  if (SCPI_ErrorCount(&scpi_context)) {
+    /* If error queue is not empty, led will flash fast */
+    blinking_speed = LED_BLINK_FAST;
+  } else if (routing_idle()) {
+    /* Blinking speed slow when all connections are open */
+    blinking_speed = LED_BLINK_SLOW;
+  } else {
+    /* Some switches are closed */
+    blinking_speed = LED_BLINK_NORMAL;
+  }
+  next_systick_counter = last_systick_counter + blinking_speed;
+  current_systick_counter = systick_counter;
+  if (current_systick_counter >= next_systick_counter) {
+    last_systick_counter = current_systick_counter;
+    LED_Toggle();
+  }
+}
+void UserButtonTask(void)
+{
 }
 
 /******************************************************************************/
@@ -171,7 +206,11 @@ void Error_Callback(void)
   else
     {
       /* Unexpected IT source : Set LED to Blinking mode to indicate error occurs */
-      LED_Blinking(LED_BLINK_ERROR);
+      LED_Blinking(LED_BLINK_FAST);
     }
 }
 
+void SysTick_Callback(void)
+{
+  systick_counter++;
+}

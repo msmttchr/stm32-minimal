@@ -141,6 +141,17 @@ void LED_Off(void)
 }
 
 /**
+ * @brief  Toggle LED2.
+ * @param  None
+ * @retval None
+ */
+void LED_Toggle(void)
+{
+  /* Toggle LED2 */
+  LL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);
+}
+
+/**
  * @brief  Set LED2 to Blinking mode for an infinite loop (toggle period based on value provided as input parameter).
  * @param  Period : Period of time (in ms) between each toggling of LED
  *   This parameter can be user defined values. Pre-defined values used in that example are :
@@ -154,7 +165,7 @@ void LED_Blinking(uint32_t Period)
   /* Toggle LED2 in an infinite loop */
   while (1)
     {
-      LL_GPIO_TogglePin(LED2_GPIO_PORT, LED2_PIN);  
+      LED_Toggle();
       LL_mDelay(Period);
     }
 }
@@ -229,4 +240,16 @@ char *getUidString(void)
   unsigned int *uid = (unsigned int *) UID_BASE;
   sprintf(uid_string, "%08x%08x%08x", uid[0], uid[1], uid[2]);
   return uid_string;
+}
+
+void Configure_SysTick(void)
+{
+  LL_Init1msTick(SystemCoreClock);
+  /* (2) NVIC Configuration for USART interrupts */
+  /*  - Set priority for USARTx_IRQn */
+  /*  - Enable USARTx_IRQn */
+  NVIC_SetPriority(SysTick_IRQn, 0);
+  NVIC_EnableIRQ(SysTick_IRQn);
+  /* Enable SysTick Interrupt */
+  SET_BIT(SysTick->CTRL,SysTick_CTRL_TICKINT_Msk);
 }

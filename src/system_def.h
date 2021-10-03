@@ -31,10 +31,9 @@
   * @brief Toggle periods for various blinking modes
   */
 
-#define LED_BLINK_FAST  200
-#define LED_BLINK_SLOW  500
-#define LED_BLINK_ERROR 1000
-
+#define LED_BLINK_FAST    200
+#define LED_BLINK_NORMAL  500
+#define LED_BLINK_SLOW    1000
 
 /**
   * @brief Key push-button
@@ -56,6 +55,7 @@
 
 /* Exported functions ------------------------------------------------------- */
 /* IRQ Handler treatment functions */
+void SysTick_Callback(void); 
 void UserButton_Callback(void); 
 void USART_CharReception_Callback(void); 
 void Error_Callback(void); 
