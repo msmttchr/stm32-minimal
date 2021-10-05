@@ -94,7 +94,6 @@ static scpi_result_t route_disconnect(scpi_t * context) {
   
   /* read first parameter */
   if (!SCPI_ParamCharacters(context, &param, &param_len, TRUE)) {
-    my_fprintf(stderr, "Here\r\n");
     res = SCPI_RES_ERR;
   }
 
