@@ -42,9 +42,9 @@ typedef struct GPIO_definition_s {
 } GPIO_definition_t;
 
 typedef struct PE42526_switch_control_s {
-  GPIO_definition_t v1;
-  GPIO_definition_t v2;
   GPIO_definition_t v3;
+  GPIO_definition_t v2;
+  GPIO_definition_t v1;
 } PE42526_switch_control_t;
 
 typedef struct PE42526_control_s {
@@ -123,7 +123,7 @@ static void switch_init(PE42526_t *rf_switch, PE42526_switch_control_t switch_co
   LL_GPIO_SetPinMode(rf_switch->control.v1.port, rf_switch->control.v1.pin, LL_GPIO_MODE_OUTPUT);
   LL_GPIO_SetPinOutputType(rf_switch->control.v1.port, rf_switch->control.v1.pin, LL_GPIO_OUTPUT_PUSHPULL);
   LL_GPIO_SetPinMode(rf_switch->control.v2.port, rf_switch->control.v2.pin, LL_GPIO_MODE_OUTPUT);
-  LL_GPIO_SetPinOutputType(rf_switch->control.v3.port, rf_switch->control.v3.pin, LL_GPIO_OUTPUT_PUSHPULL);
+  LL_GPIO_SetPinOutputType(rf_switch->control.v2.port, rf_switch->control.v2.pin, LL_GPIO_OUTPUT_PUSHPULL);
   LL_GPIO_SetPinMode(rf_switch->control.v3.port, rf_switch->control.v3.pin, LL_GPIO_MODE_OUTPUT);
   LL_GPIO_SetPinOutputType(rf_switch->control.v3.port, rf_switch->control.v3.pin, LL_GPIO_OUTPUT_PUSHPULL);
   switch_connection(rf_switch, RFC);
@@ -148,6 +148,8 @@ void routing_init(void)
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOC);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOD);
 
+  LL_GPIO_SetPinMode(GPIOC, LL_GPIO_PIN_12, LL_GPIO_MODE_OUTPUT);
+  LL_GPIO_SetPinOutputType(GPIOC, LL_GPIO_PIN_12, LL_GPIO_OUTPUT_PUSHPULL);
   set_gpio_pin(GPIOC, LL_GPIO_PIN_12, 1);
 
   for (i = 0; i < sizeof(RFswitch)/sizeof(PE42526_t); i++) {
